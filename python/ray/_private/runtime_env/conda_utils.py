@@ -86,7 +86,10 @@ def _get_conda_env_name(conda_env_path: str) -> str:
 
 
 def create_conda_env_if_needed(
-    conda_yaml_file: str, prefix: str, logger: Optional[logging.Logger] = None
+    conda_yaml_file: str,
+    prefix: str,
+    logger: Optional[logging.Logger] = None,
+    use_mamba: bool = False,
 ) -> None:
     """
     Given a conda YAML, creates a conda environment containing the required
@@ -97,11 +100,13 @@ def create_conda_env_if_needed(
             the `--prefix` option to conda create.  This also becomes the name
             of the conda env; i.e. it can be passed into `conda activate` and
             `conda remove`
+        use_mamba: If true, use mamba to install environments over conda. See
+            https://github.com/mamba-org/mamba .
     """
     if logger is None:
         logger = logging.getLogger(__name__)
 
-    conda_path = get_conda_bin_executable("conda")
+    conda_path = get_conda_bin_executable("conda" if not use_mamba else "mamba")
     try:
         exec_cmd([conda_path, "--help"], throw_on_error=False)
     except (EnvironmentError, FileNotFoundError):
@@ -217,7 +222,7 @@ def exec_cmd_stream_to_logger(
 
     The last n_lines lines of output are also returned (stdout and stderr).
     """
-    if "env" in kwargs and _WIN32 and "PATH" not in [x.upper() for x in kwargs.keys]:
+    if "env" in kwargs and _WIN32 and "PATH" not in [x.upper() for x in kwargs.keys()]:
         raise ValueError("On windows, Popen requires 'PATH' in 'env'")
     child = subprocess.Popen(
         cmd,

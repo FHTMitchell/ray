@@ -251,6 +251,7 @@ class RuntimeEnv(dict):
         "java_jars",
         "working_dir",
         "conda",
+        "mamba",
         "pip",
         "container",
         "excludes",
@@ -282,6 +283,7 @@ class RuntimeEnv(dict):
         working_dir: Optional[str] = None,
         pip: Optional[List[str]] = None,
         conda: Optional[Union[Dict[str, str], str]] = None,
+        mamba: Optional[Union[Dict[str, str], str]] = None,
         container: Optional[Dict[str, str]] = None,
         env_vars: Optional[Dict[str, str]] = None,
         worker_process_setup_hook: Optional[Union[Callable, str]] = None,
@@ -302,6 +304,8 @@ class RuntimeEnv(dict):
             runtime_env["pip"] = pip
         if conda is not None:
             runtime_env["conda"] = conda
+        if mamba is not None:
+            runtime_env["mamba"] = mamba
         if nsight is not None:
             runtime_env["_nsight"] = nsight
         if container is not None:
@@ -321,19 +325,27 @@ class RuntimeEnv(dict):
 
         # Blindly trust that the runtime_env has already been validated.
         # This is dangerous and should only be used internally (e.g., on the
-        # deserialization codepath.
+        # deserialization codepath).
         if not _validate:
             return
 
-        if self.get("conda") and self.get("pip"):
+        # We only support one of conda/mamba/pip.
+        conda_mamba_pip_count = sum(
+            1
+            for v in [self.get("conda"), self.get("mamba"), self.get("pip")]
+            if v is not None
+        )
+        if conda_mamba_pip_count > 1:
             raise ValueError(
-                "The 'pip' field and 'conda' field of "
-                "runtime_env cannot both be specified.\n"
+                "Only one of the 'pip', 'conda' and 'mamba' fields"
+                "of runtime_env can be specified.\n"
                 f"specified pip field: {self['pip']}\n"
                 f"specified conda field: {self['conda']}\n"
-                "To use pip with conda, please only set the 'conda' "
+                f"specified mambda field: {self['mamba']}\n"
+                "To use pip with conda or mamba, please only "
+                "set the 'conda' or 'mamba'"
                 "field, and specify your pip dependencies "
-                "within the conda YAML config dict: see "
+                "within the YAML config dict: see "
                 "https://conda.io/projects/conda/en/latest/"
                 "user-guide/tasks/manage-environments.html"
                 "#create-env-file-manually"
@@ -346,7 +358,7 @@ class RuntimeEnv(dict):
                 self[option] = option_val
 
         if "_ray_commit" not in self:
-            if self.get("pip") or self.get("conda"):
+            if conda_mamba_pip_count >= 1:
                 self["_ray_commit"] = ray.__commit__
 
         # Used for testing wheels that have not yet been merged into master.
@@ -456,17 +468,17 @@ class RuntimeEnv(dict):
     def env_vars(self) -> Dict:
         return self.get("env_vars", {})
 
-    def has_conda(self) -> str:
+    def has_conda(self) -> bool:
         if self.get("conda"):
             return True
         return False
 
-    def conda_env_name(self) -> str:
+    def conda_env_name(self) -> Optional[str]:
         if not self.has_conda() or not isinstance(self["conda"], str):
             return None
         return self["conda"]
 
-    def conda_config(self) -> str:
+    def conda_config(self) -> Optional[str]:
         if not self.has_conda() or not isinstance(self["conda"], dict):
             return None
         return json.dumps(self["conda"], sort_keys=True)
@@ -511,7 +523,7 @@ class RuntimeEnv(dict):
             return None
         return self["container"].get("worker_path", "")
 
-    def py_container_run_options(self) -> List:
+    def py_container_run_options(self) -> Optional[List[Any]]:
         if not self.has_py_container():
             return None
         return self["container"].get("run_options", [])

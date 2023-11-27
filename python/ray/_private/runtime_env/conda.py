@@ -257,7 +257,6 @@ def _get_conda_dict_with_ray_inserted(
 
 
 class CondaPlugin(RuntimeEnvPlugin):
-
     name = "conda"
 
     def __init__(self, resources_dir: str):
@@ -371,7 +370,7 @@ class CondaPlugin(RuntimeEnvPlugin):
                     )
                     with open(conda_yaml_file, "w") as file:
                         yaml.dump(conda_dict, file)
-                    create_conda_env_if_needed(
+                    self.create_conda_env_if_needed(
                         conda_yaml_file, prefix=conda_env_name, logger=logger
                     )
                 finally:
@@ -384,6 +383,13 @@ class CondaPlugin(RuntimeEnvPlugin):
 
         loop = get_or_create_event_loop()
         return await loop.run_in_executor(None, _create)
+
+    def create_conda_env_if_needed(
+        self, conda_yaml_file: str, prefix: str, logger: Optional[logging.Logger] = None
+    ):
+        create_conda_env_if_needed(
+            conda_yaml_file, prefix=prefix, logger=logger, use_mamba=False
+        )
 
     def modify_context(
         self,
@@ -402,3 +408,17 @@ class CondaPlugin(RuntimeEnvPlugin):
             conda_env_name = self._get_path_from_hash(hash)
         context.py_executable = "python"
         context.command_prefix += get_conda_activate_commands(conda_env_name)
+
+
+class MambaPlugin(CondaPlugin):
+    """Mamba works almost exactly the same as conda, just a different executable
+    is called to *create* the environment (using the libmamba different solver).
+    """
+    name = "mamba"
+
+    def create_conda_env_if_needed(
+        self, conda_yaml_file: str, prefix: str, logger: Optional[logging.Logger] = None
+    ):
+        create_conda_env_if_needed(
+            conda_yaml_file, prefix=prefix, logger=logger, use_mamba=True
+        )

@@ -13,7 +13,7 @@ from ray._private.ray_constants import (
 
 import ray._private.runtime_env.agent.runtime_env_consts as runtime_env_consts
 from ray._private.ray_logging import setup_component_logger
-from ray._private.runtime_env.conda import CondaPlugin
+from ray._private.runtime_env.conda import CondaPlugin, MambaPlugin
 from ray._private.runtime_env.container import ContainerManager
 from ray._private.runtime_env.context import RuntimeEnvContext
 from ray._private.runtime_env.java_jars import JavaJarsPlugin
@@ -191,6 +191,7 @@ class RuntimeEnvAgent:
 
         self._pip_plugin = PipPlugin(self._runtime_env_dir)
         self._conda_plugin = CondaPlugin(self._runtime_env_dir)
+        self._mamba_plugin = MambaPlugin(self._runtime_env_dir)
         self._py_modules_plugin = PyModulesPlugin(
             self._runtime_env_dir, self._gcs_aio_client
         )
@@ -213,6 +214,7 @@ class RuntimeEnvAgent:
             self._working_dir_plugin,
             self._pip_plugin,
             self._conda_plugin,
+            self._mamba_plugin,
             self._py_modules_plugin,
             self._java_jars_plugin,
             self._nsight_plugin,

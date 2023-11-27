@@ -39,7 +39,7 @@ RUN apt-get update -y && sudo apt-get upgrade -y \
     && echo 'export PATH=$HOME/anaconda3/bin:$PATH' >> /root/.bashrc \
     && rm /tmp/miniconda.sh \
     && $HOME/anaconda3/bin/conda install -y \
-        libgcc python=$PYTHON_VERSION \
+        libgcc python=$PYTHON_VERSION mamba \
     && $HOME/anaconda3/bin/conda clean -y --all \
     && $HOME/anaconda3/bin/pip install --no-cache-dir \
         flatbuffers \
